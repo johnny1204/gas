@@ -1,4 +1,4 @@
-var token = '*******'
+var token = '****'
 
 function getStartTime() {
   var cal = CalendarApp.getCalendarById("npb_7_%53aitama+%53eibu+%4cions#sports@group.v.calendar.google.com");
@@ -9,22 +9,54 @@ function getStartTime() {
 }
 
 function setTrigger() {
-  if(formatDate(new Date()) > getStartTime()){
-    doPost()
-  }
-  //ScriptApp.newTrigger("doPost").timeBased().everyMinutes(5).create();
+  if(formatDate(new Date()) > getStartTime()) ScriptApp.newTrigger("doPost").timeBased().everyMinutes(5).create()
 }
 
-function doPost() {
+function doPost(e) {
   var response = UrlFetchApp.fetch("https://pacific-reaches-63357.herokuapp.com/notice/")
   var json = JSON.parse(response.getContentText())
   var result = json["result"]
-  if(result) {
+  
+  var message = ""
+  if(result == "試合終了") {
+    message = result
+    deleteTrigger()
+  } else {
     var lions = result["lions"]
     var opponent = result["opponent"]
     var inning = Math.max(lions["inning"], opponent["inning"]).toString() + "回" + ((lions["inning"] == opponent["inning"]) ? "裏" : "表")
     result = "ライオンズ " + lions["total_score"] + "-" + opponent["total_score"] + " 相手チーム"
-    Logger.log(inning + inningScore(lions, opponent) + "点\n" + result)
+    message = inning + inningScore(lions, opponent) + "点\n" + result
+  }
+
+  pushMessage(message)
+}
+
+function pushMessage(message) {
+  var headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token,
+  }
+  
+  var options = {
+    "method": "post",
+    "headers": headers,
+    "payload": JSON.stringify({
+      "to": '****',
+      "type": "text",
+      "messages": [{type: "text", text: message}]
+    })
+  }
+
+  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", options);
+}
+
+function deleteTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for(var i=0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() == "doPost") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
   }
 }
 
@@ -39,4 +71,3 @@ function inningScore(lions, opponent) {
     return lions["inning_score"]
   }  
 }
-
