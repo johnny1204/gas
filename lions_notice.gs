@@ -9,10 +9,10 @@ function getStartTime() {
 }
 
 function setTrigger() {
-  if(formatDate(new Date()) > getStartTime()) ScriptApp.newTrigger("doPost").timeBased().everyMinutes(5).create()
+  if(formatDate(new Date()) > getStartTime()) ScriptApp.newTrigger("push").timeBased().everyMinutes(5).create()
 }
 
-function doPost(e) {
+function push(e) {
   var response = UrlFetchApp.fetch("https://pacific-reaches-63357.herokuapp.com/notice/")
   var json = JSON.parse(response.getContentText())
   var result = json["result"]
@@ -42,7 +42,6 @@ function pushMessage(message) {
     "method": "post",
     "headers": headers,
     "payload": JSON.stringify({
-      "to": '****',
       "type": "text",
       "messages": [{type: "text", text: message}]
     })
@@ -54,7 +53,7 @@ function pushMessage(message) {
 function deleteTrigger() {
   var triggers = ScriptApp.getProjectTriggers();
   for(var i=0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() == "doPost") {
+    if (triggers[i].getHandlerFunction() == "push") {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
@@ -70,4 +69,19 @@ function inningScore(lions, opponent) {
   } else {
     return lions["inning_score"]
   }  
+}
+
+function doPost(e) {
+  var events = JSON.parse(e.postData.contents).events
+  events.forEach(function(event) {
+    if(event.type == "follow") {
+      follow(event);
+    }
+  })
+}
+
+function follow(e) {
+  var spreadsheet = SpreadsheetApp.openById('****')
+  var sheet = spreadsheet.getActiveSheet()
+  sheet.appendRow([e.source.userId])
 }
